@@ -20,6 +20,9 @@ public class GPACalculatorTest {
         testCGPAWithNoSemesters();
         testProgramAcceptsMultipleSemesters();
         testProgramDisplaysMatchingResults();
+        testProgramRejectsEmptySemesterName();
+        testProgramRejectsDuplicateSemesterName();
+        testProgramChecksDuplicatesForEverySemester();
 
         System.out.println("All " + testsPassed + " GPA tests passed.");
     }
@@ -237,6 +240,120 @@ public class GPACalculatorTest {
                 "Program must display the expected total credit hours");
         assertTrue(result.contains("Total Quality Points: 18.0"),
                 "Program must display the expected total quality points");
+    }
+
+
+    private static void testProgramRejectsEmptySemesterName() throws Exception {
+        String input = String.join("\n",
+                "Test Student",
+                "1",
+                "1",
+                "   ",
+                "Fall 2026",
+                "1",
+                "Course A",
+                "A101",
+                "3",
+                "A+",
+                "N",
+                "");
+
+        String result = runProgramWithInput(input);
+        assertTrue(result.contains("Semester name can't be empty."),
+                "Program must reject whitespace-only semester names");
+        assertTrue(result.contains("Semester Name       : Fall 2026"),
+                "Program must accept a valid name after an empty name");
+    }
+
+    private static void testProgramRejectsDuplicateSemesterName() throws Exception {
+        String input = String.join("\n",
+                "Test Student",
+                "1",
+                "1",
+                "Fall 2026",
+                "1",
+                "Course A",
+                "A101",
+                "3",
+                "A+",
+                "Y",
+                "fALL 2026",
+                "Spring 2027",
+                "1",
+                "Course B",
+                "B101",
+                "3",
+                "B",
+                "N",
+                "");
+
+        String result = runProgramWithInput(input);
+        assertTrue(result.contains("Semester already exists."),
+                "Program must reject duplicate names regardless of letter case");
+        assertTrue(result.contains("Semester Name       : Fall 2026"),
+                "Program must preserve the first semester");
+        assertTrue(result.contains("Semester Name       : Spring 2027"),
+                "Program must accept a different name after a duplicate");
+        assertTrue(!result.contains("Semester Name       : fALL 2026"),
+                "Program must not create a semester with a duplicate name");
+    }
+
+    private static void testProgramChecksDuplicatesForEverySemester() throws Exception {
+        String input = String.join("\n",
+                "Test Student",
+                "1",
+                "1",
+                "Fall 2026",
+                "1",
+                "Course A",
+                "A101",
+                "3",
+                "A+",
+                "Y",
+                "Spring 2027",
+                "1",
+                "Course B",
+                "B101",
+                "3",
+                "B",
+                "Y",
+                "fALL 2026",
+                "Summer 2027",
+                "1",
+                "Course C",
+                "C101",
+                "3",
+                "A",
+                "N",
+                "");
+
+        String result = runProgramWithInput(input);
+        assertTrue(result.contains("Semester already exists."),
+                "Program must detect duplicates against earlier semesters");
+        assertTrue(result.contains("Semester Name       : Fall 2026"),
+                "First semester must be retained");
+        assertTrue(result.contains("Semester Name       : Spring 2027"),
+                "Second semester must be retained");
+        assertTrue(result.contains("Semester Name       : Summer 2027"),
+                "Third semester must accept a unique name");
+    }
+
+    private static String runProgramWithInput(String input) throws Exception {
+        InputStream originalIn = System.in;
+        PrintStream originalOut = System.out;
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+
+        try {
+            System.setIn(new ByteArrayInputStream(
+                    input.getBytes(StandardCharsets.UTF_8)));
+            System.setOut(new PrintStream(output, true, "UTF-8"));
+            Program.main(new String[0]);
+        } finally {
+            System.setIn(originalIn);
+            System.setOut(originalOut);
+        }
+
+        return output.toString("UTF-8");
     }
 
     private static void assertEquals(double expected, double actual, String testName) {
